@@ -21,11 +21,7 @@ package org.apache.flume.source.taildir;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
+import com.google.common.collect.*;
 import com.google.common.io.Files;
 import org.apache.flume.Event;
 import org.junit.After;
@@ -38,11 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.flume.source.taildir.TaildirSourceConfigurationConstants
-                  .BYTE_OFFSET_HEADER_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.flume.source.taildir.TaildirSourceConfigurationConstants.BYTE_OFFSET_HEADER_KEY;
+import static org.junit.Assert.*;
 
 public class TestTaildirEventReader {
   private File tmpDir;
@@ -493,4 +486,67 @@ public class TestTaildirEventReader {
     assertTrue(out.contains("file1line3"));
     assertTrue(out.contains("file1line4"));
   }
+
+  @Test
+  public void testLogFileRolling() throws IOException {
+
+    //given
+    File f1 = new File(tmpDir, "file1");
+    Files.write("file1line1\nfile1line2\rfile1line2\n", f1, Charsets.UTF_8);
+
+    ReliableTaildirEventReader reader = getReader();
+    List<String> out = Lists.newArrayList();
+    for (TailFile tf : reader.getTailFiles().values()) {
+      bodiesAsStrings(reader.readEvents(tf, 2));
+      reader.commit();
+    }
+
+    //when
+    File fileToMove = new File(tmpDir, "file1_01");
+    f1.renameTo(fileToMove);
+
+    reader.updateTailFiles();
+    for (TailFile tf : reader.getTailFiles().values()) {
+      out.addAll(bodiesAsStrings(reader.readEvents(tf, 2)));
+      reader.commit();
+    }
+
+    //then
+    assertFalse(out.contains("file1line1"));
+    assertFalse(out.contains("file1line2"));
+  }
+
+  @Test
+  public void testCleanTailFilesMap() throws IOException {
+
+    //given
+    File f1 = new File(tmpDir, "file1");
+    File f2 = new File(tmpDir, "file2");
+    File f3 = new File(tmpDir, "file3");
+
+    f1.createNewFile();
+    f2.createNewFile();
+    f3.createNewFile();
+
+    ReliableTaildirEventReader reader = getReader();
+
+    //when
+    int beforeSize = reader.getTailFiles().values().size();
+
+    f1.delete();
+    f2.delete();
+
+    File f4 = new File(tmpDir, "file4");
+    File f5 = new File(tmpDir, "file5");
+
+    f4.createNewFile();
+    f5.createNewFile();
+
+    reader.updateTailFiles();
+
+    //then
+    int afterSize = reader.getTailFiles().size();
+    assertEquals(beforeSize, afterSize);
+  }
+
 }

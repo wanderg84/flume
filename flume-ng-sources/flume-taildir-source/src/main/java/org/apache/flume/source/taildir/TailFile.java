@@ -28,6 +28,10 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +50,7 @@ public class TailFile {
   private final String path;
   private final long inode;
   private long pos;
+  private FileTime creationTime;
   private long lastUpdated;
   private boolean needTail;
   private final Map<String, String> headers;
@@ -69,6 +74,9 @@ public class TailFile {
     this.headers = headers;
     this.oldBuffer = new byte[0];
     this.bufferPos = NEED_READING;
+
+    BasicFileAttributes attr = Files.readAttributes(Paths.get(file.getAbsolutePath()), BasicFileAttributes.class);
+    this.creationTime =  attr.creationTime();
   }
 
   public RandomAccessFile getRaf() {
@@ -244,6 +252,10 @@ public class TailFile {
     } catch (IOException e) {
       logger.error("Failed closing file: " + path + ", inode: " + inode, e);
     }
+  }
+
+  public FileTime getCreationTime() {
+    return creationTime;
   }
 
   private class LineResult {

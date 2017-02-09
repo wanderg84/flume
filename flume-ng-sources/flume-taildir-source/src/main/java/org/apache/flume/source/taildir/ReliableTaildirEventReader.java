@@ -38,9 +38,9 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.*;
 import java.util.Map.Entry;
 
 @InterfaceAudience.Private
@@ -244,7 +244,21 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
       for (File f : taildir.getMatchingFiles()) {
         long inode = getInode(f);
         TailFile tf = tailFiles.get(inode);
-        if (tf == null || !tf.getPath().equals(f.getAbsolutePath())) {
+
+        //rollingFile
+        if (tf != null && !tf.getPath().equals(f.getAbsolutePath())) {
+
+          BasicFileAttributes attr = Files.readAttributes(Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
+          if (attr.creationTime().equals(tf.getCreationTime())) {
+            TailFile tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
+            tailFiles.remove(tf);
+            tailFiles.put(inode, tailFile);
+
+            logger.info("rolling file : %s => %s", tf.getPath(), tailFile.getPath());
+          }
+        }
+
+        if (tf == null) {
           long startPos = skipToEnd ? f.length() : 0;
           tf = openFile(f, headers, inode, startPos);
         } else {
@@ -265,6 +279,17 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
         updatedInodes.add(inode);
       }
     }
+
+    //clear deleted file info
+    Iterator<TailFile> it = tailFiles.values().iterator();
+    while(it.hasNext()) {
+      TailFile tf = it.next();
+      if(!updatedInodes.contains(tf.getInode())) {
+        it.remove();
+        logger.info("clear tailfile : not exists {}", tf.getPath());
+      }
+    }
+
     return updatedInodes;
   }
 

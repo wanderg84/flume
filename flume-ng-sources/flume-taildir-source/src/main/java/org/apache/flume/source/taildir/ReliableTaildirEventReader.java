@@ -251,10 +251,10 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
           BasicFileAttributes attr = Files.readAttributes(Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
           if (attr.creationTime().equals(tf.getCreationTime())) {
             TailFile tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
-            tailFiles.remove(tf);
-            tailFiles.put(inode, tailFile);
+            tailFiles.remove(tf.getInode());
+            tf = tailFile;
 
-            logger.info("rolling file : %s => %s", tf.getPath(), tailFile.getPath());
+            logger.info("rolling file : {} => {}", tf.getPath(), tailFile.getPath());
           }
         }
 

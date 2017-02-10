@@ -45,7 +45,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-
 public class TestTaildirEventReader {
   private File tmpDir;
   private String posFilePath;
@@ -71,7 +70,8 @@ public class TestTaildirEventReader {
   }
 
   private ReliableTaildirEventReader getReader(Map<String, String> filePaths,
-                                               Table<String, String, String> headerTable, boolean addByteOffset) {
+                                               Table<String, String, String> headerTable,
+                                               boolean addByteOffset) {
     ReliableTaildirEventReader reader;
     try {
       reader = new ReliableTaildirEventReader.Builder()
@@ -557,5 +557,4 @@ public class TestTaildirEventReader {
     int afterSize = reader.getTailFiles().size();
     assertEquals(beforeSize, afterSize);
   }
-
 }

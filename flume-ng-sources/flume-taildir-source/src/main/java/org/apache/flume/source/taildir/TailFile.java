@@ -129,7 +129,8 @@ public class TailFile {
   }
 
 
-  public boolean updatePos(String path, long inode, long pos, long creationTime) throws IOException {
+  public boolean updatePos(String path, long inode, long pos, long creationTime)
+          throws IOException {
     if (this.inode == inode
             && (this.creationTime.toMillis() == creationTime || Long.MIN_VALUE == creationTime)) {
       updatePos(path, inode, pos);
@@ -139,9 +140,9 @@ public class TailFile {
   }
 
   public void updatePos(String path, long inode, long pos) throws IOException {
-      setPos(pos);
-      updateFilePos(pos);
-      logger.info("Updated position, file: " + path + ", inode: " + inode + ", pos: " + pos);
+    setPos(pos);
+    updateFilePos(pos);
+    logger.info("Updated position, file: " + path + ", inode: " + inode + ", pos: " + pos);
   }
 
   public void updateFilePos(long pos) throws IOException {

@@ -75,7 +75,8 @@ public class TailFile {
     this.oldBuffer = new byte[0];
     this.bufferPos = NEED_READING;
 
-    BasicFileAttributes attr = Files.readAttributes(Paths.get(file.getAbsolutePath()), BasicFileAttributes.class);
+    BasicFileAttributes attr = Files.readAttributes(
+            Paths.get(file.getAbsolutePath()), BasicFileAttributes.class);
     this.creationTime =  attr.creationTime();
   }
 
@@ -127,15 +128,22 @@ public class TailFile {
     this.lineReadPos = lineReadPos;
   }
 
-  public boolean updatePos(String path, long inode, long pos) throws IOException {
-    if (this.inode == inode && this.path.equals(path)) {
-      setPos(pos);
-      updateFilePos(pos);
-      logger.info("Updated position, file: " + path + ", inode: " + inode + ", pos: " + pos);
+
+  public boolean updatePos(String path, long inode, long pos, long creationTime) throws IOException {
+    if (this.inode == inode
+            && (this.creationTime.toMillis() == creationTime || Long.MIN_VALUE == creationTime)) {
+      updatePos(path, inode, pos);
       return true;
     }
     return false;
   }
+
+  public void updatePos(String path, long inode, long pos) throws IOException {
+      setPos(pos);
+      updateFilePos(pos);
+      logger.info("Updated position, file: " + path + ", inode: " + inode + ", pos: " + pos);
+  }
+
   public void updateFilePos(long pos) throws IOException {
     raf.seek(pos);
     lineReadPos = pos;

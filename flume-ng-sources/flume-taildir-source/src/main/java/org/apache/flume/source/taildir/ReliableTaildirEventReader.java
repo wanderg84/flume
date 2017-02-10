@@ -104,6 +104,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
    */
   public void loadPositionFile(String filePath) {
     Long inode, pos;
+    Long creationTime = Long.MIN_VALUE;
     String path;
     FileReader fr = null;
     JsonReader jr = null;
@@ -127,6 +128,9 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
             case "file":
               path = jr.nextString();
               break;
+            case "creationTime":
+              creationTime = jr.nextLong();
+              break;
           }
         }
         jr.endObject();
@@ -136,7 +140,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
               + "inode: " + inode + ", pos: " + pos + ", path: " + path);
         }
         TailFile tf = tailFiles.get(inode);
-        if (tf != null && tf.updatePos(path, inode, pos)) {
+        if (tf != null && tf.updatePos(path, inode, pos, creationTime)) {
           tailFiles.put(inode, tf);
         } else {
           logger.info("Missing file: " + path + ", inode: " + inode + ", pos: " + pos);

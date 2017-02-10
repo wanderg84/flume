@@ -40,7 +40,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 @InterfaceAudience.Private
@@ -247,14 +250,21 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
 
         //rollingFile
         if (tf != null && !tf.getPath().equals(f.getAbsolutePath())) {
+          TailFile tailFile;
+          BasicFileAttributes attr = Files.readAttributes(
+                  Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
 
-          BasicFileAttributes attr = Files.readAttributes(Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
           if (attr.creationTime().equals(tf.getCreationTime())) {
-            TailFile tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
+
+            tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
             tailFiles.remove(tf.getInode());
             tf = tailFile;
-
             logger.info("rolling file : {} => {}", tf.getPath(), tailFile.getPath());
+          } else {
+
+            tailFiles.remove(tf.getInode());
+            tf = null;
+            logger.info(" Other files use the same inode : clear tailFile {}", tf.getPath());
           }
         }
 
@@ -282,9 +292,9 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
 
     //clear deleted file info
     Iterator<TailFile> it = tailFiles.values().iterator();
-    while(it.hasNext()) {
+    while (it.hasNext()) {
       TailFile tf = it.next();
-      if(!updatedInodes.contains(tf.getInode())) {
+      if (!updatedInodes.contains(tf.getInode())) {
         it.remove();
         logger.info("clear tailfile : not exists {}", tf.getPath());
       }

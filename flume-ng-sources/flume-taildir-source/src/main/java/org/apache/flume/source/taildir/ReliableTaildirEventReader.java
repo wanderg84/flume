@@ -258,6 +258,17 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
           BasicFileAttributes attr = Files.readAttributes(
                   Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
 
+          logger.info(
+                  String.format("compare file - tailFile meta : inode %d creationTime %d path %s",
+                          tf.getInode(),
+                          tf.getCreationTime().toMillis(),
+                          tf.getPath()));
+          logger.info(
+                  String.format("compare file - file attr : inode %d creationTime %d path %s",
+                          inode,
+                          attr.creationTime().toMillis(),
+                          f.getAbsoluteFile()));
+
           if (attr.creationTime().equals(tf.getCreationTime())) {
 
             tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
@@ -265,10 +276,9 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
             tf = tailFile;
             logger.info("rolling file : {} => {}", tf.getPath(), tailFile.getPath());
           } else {
-
+            logger.info(" Other files use the same inode : clear tailFile {}", tf.getPath());
             tailFiles.remove(tf.getInode());
             tf = null;
-            logger.info(" Other files use the same inode : clear tailFile {}", tf.getPath());
           }
         }
 

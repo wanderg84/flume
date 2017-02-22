@@ -62,6 +62,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
   private boolean committed = true;
   private final boolean annotateFileName;
   private final String fileNameHeader;
+  private boolean compareCreationTime;
 
   /**
    * Create a ReliableTaildirEventReader to watch the given directory.
@@ -69,7 +70,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
   private ReliableTaildirEventReader(Map<String, String> filePaths,
       Table<String, String, String> headerTable, String positionFilePath,
       boolean skipToEnd, boolean addByteOffset, boolean cachePatternMatching,
-      boolean annotateFileName, String fileNameHeader) throws IOException {
+      boolean annotateFileName, String fileNameHeader, boolean compareCreationTime) throws IOException {
     // Sanity checks
     Preconditions.checkNotNull(filePaths);
     Preconditions.checkNotNull(positionFilePath);
@@ -92,6 +93,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
     this.cachePatternMatching = cachePatternMatching;
     this.annotateFileName = annotateFileName;
     this.fileNameHeader = fileNameHeader;
+    this.compareCreationTime = compareCreationTime;
     updateTailFiles(skipToEnd);
 
     logger.info("Updating position from position file: " + positionFilePath);
@@ -139,8 +141,9 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
           Preconditions.checkNotNull(v, "Detected missing value in position file. "
               + "inode: " + inode + ", pos: " + pos + ", path: " + path);
         }
+
         TailFile tf = tailFiles.get(inode);
-        if (tf != null && tf.updatePos(path, inode, pos, creationTime)) {
+        if (tf != null && updatePosByStoredPos(tf, path, inode, pos, creationTime)) {
           tailFiles.put(inode, tf);
         } else {
           logger.info("Missing file: " + path + ", inode: " + inode + ", pos: " + pos);
@@ -159,6 +162,13 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
         logger.error("Error: " + e.getMessage(), e);
       }
     }
+  }
+
+  private boolean updatePosByStoredPos(TailFile tf, String path, Long inode, Long pos, Long creationTime) throws IOException {
+    if (compareCreationTime) {
+        return tf.updatePos(path, inode, pos, creationTime);
+    }
+    return tf.updatePos(path, inode, pos);
   }
 
   public Map<Long, TailFile> getTailFiles() {
@@ -258,18 +268,7 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
           BasicFileAttributes attr = Files.readAttributes(
                   Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
 
-          logger.info(
-                  String.format("compare file - tailFile meta : inode %d creationTime %d path %s",
-                          tf.getInode(),
-                          tf.getCreationTime().toMillis(),
-                          tf.getPath()));
-          logger.info(
-                  String.format("compare file - file attr : inode %d creationTime %d path %s",
-                          inode,
-                          attr.creationTime().toMillis(),
-                          f.getAbsoluteFile()));
-
-          if (attr.creationTime().equals(tf.getCreationTime())) {
+          if (!compareCreationTime || attr.creationTime().equals(tf.getCreationTime())) {
 
             tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
             tailFiles.remove(tf.getInode());
@@ -346,10 +345,12 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
     private boolean skipToEnd;
     private boolean addByteOffset;
     private boolean cachePatternMatching;
+    private boolean compareCreationTime;
     private Boolean annotateFileName =
             TaildirSourceConfigurationConstants.DEFAULT_FILE_HEADER;
     private String fileNameHeader =
             TaildirSourceConfigurationConstants.DEFAULT_FILENAME_HEADER_KEY;
+
 
     public Builder filePaths(Map<String, String> filePaths) {
       this.filePaths = filePaths;
@@ -391,10 +392,15 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
       return this;
     }
 
+    public Builder compareCreationTime(boolean compareCreationTime) {
+      this.compareCreationTime = compareCreationTime;
+      return this;
+    }
+
     public ReliableTaildirEventReader build() throws IOException {
       return new ReliableTaildirEventReader(filePaths, headerTable, positionFilePath, skipToEnd,
                                             addByteOffset, cachePatternMatching,
-                                            annotateFileName, fileNameHeader);
+                                            annotateFileName, fileNameHeader, compareCreationTime);
     }
   }
 

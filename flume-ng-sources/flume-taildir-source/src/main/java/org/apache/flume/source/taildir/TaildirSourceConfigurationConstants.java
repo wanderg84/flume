@@ -63,4 +63,7 @@ public class TaildirSourceConfigurationConstants {
   /** Whether to include absolute path filename in a header. */
   public static final String FILENAME_HEADER = "fileHeader";
   public static final boolean DEFAULT_FILE_HEADER = false;
+
+  public static final String COMPARE_CREATION_TIME = "compareCreationTime";
+  public static final boolean DEFAULT_COMPARE_CREATION_TIME = false;
 }

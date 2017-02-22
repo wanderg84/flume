@@ -17,7 +17,26 @@
 
 package org.apache.flume.source.taildir;
 
-import static org.apache.flume.source.taildir.TaildirSourceConfigurationConstants.*;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.gson.Gson;
+import org.apache.flume.ChannelException;
+import org.apache.flume.Context;
+import org.apache.flume.Event;
+import org.apache.flume.FlumeException;
+import org.apache.flume.PollableSource;
+import org.apache.flume.conf.Configurable;
+import org.apache.flume.instrumentation.SourceCounter;
+import org.apache.flume.source.AbstractSource;
+import org.apache.flume.source.PollableSourceConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -34,27 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.flume.ChannelException;
-import org.apache.flume.Context;
-import org.apache.flume.Event;
-import org.apache.flume.FlumeException;
-import org.apache.flume.PollableSource;
-import org.apache.flume.conf.Configurable;
-import org.apache.flume.instrumentation.SourceCounter;
-import org.apache.flume.source.AbstractSource;
-import org.apache.flume.source.PollableSourceConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Table;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.gson.Gson;
+import static org.apache.flume.source.taildir.TaildirSourceConfigurationConstants.*;
 
 public class TaildirSource extends AbstractSource implements
     PollableSource, Configurable {
@@ -86,6 +85,7 @@ public class TaildirSource extends AbstractSource implements
   private Long maxBackOffSleepInterval;
   private boolean fileHeader;
   private String fileHeaderKey;
+  private boolean compareCreationTime;
 
   @Override
   public synchronized void start() {
@@ -100,6 +100,7 @@ public class TaildirSource extends AbstractSource implements
           .cachePatternMatching(cachePatternMatching)
           .annotateFileName(fileHeader)
           .fileNameHeader(fileHeaderKey)
+          .compareCreationTime(compareCreationTime)
           .build();
     } catch (IOException e) {
       throw new FlumeException("Error instantiating ReliableTaildirEventReader", e);
@@ -184,6 +185,8 @@ public class TaildirSource extends AbstractSource implements
             DEFAULT_FILE_HEADER);
     fileHeaderKey = context.getString(FILENAME_HEADER_KEY,
             DEFAULT_FILENAME_HEADER_KEY);
+    compareCreationTime = context.getBoolean(COMPARE_CREATION_TIME,
+            DEFAULT_COMPARE_CREATION_TIME);
 
     if (sourceCounter == null) {
       sourceCounter = new SourceCounter(getName());

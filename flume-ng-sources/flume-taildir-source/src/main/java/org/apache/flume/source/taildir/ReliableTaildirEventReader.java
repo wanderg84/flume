@@ -70,7 +70,8 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
   private ReliableTaildirEventReader(Map<String, String> filePaths,
       Table<String, String, String> headerTable, String positionFilePath,
       boolean skipToEnd, boolean addByteOffset, boolean cachePatternMatching,
-      boolean annotateFileName, String fileNameHeader, boolean compareCreationTime) throws IOException {
+      boolean annotateFileName, String fileNameHeader, boolean compareCreationTime)
+          throws IOException {
     // Sanity checks
     Preconditions.checkNotNull(filePaths);
     Preconditions.checkNotNull(positionFilePath);
@@ -164,9 +165,12 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
     }
   }
 
-  private boolean updatePosByStoredPos(TailFile tf, String path, Long inode, Long pos, Long creationTime) throws IOException {
+  private boolean updatePosByStoredPos(TailFile tf, String path,
+                                       Long inode, Long pos, Long creationTime)
+          throws IOException {
+
     if (compareCreationTime) {
-        return tf.updatePos(path, inode, pos, creationTime);
+      return tf.updatePos(path, inode, pos, creationTime);
     }
     return tf.updatePos(path, inode, pos);
   }
@@ -269,11 +273,10 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
                   Paths.get(f.getAbsolutePath()), BasicFileAttributes.class);
 
           if (!compareCreationTime || attr.creationTime().equals(tf.getCreationTime())) {
-
             tailFile = openFile(f, tf.getHeaders(), inode, tf.getPos());
+            logger.info("rolling file : {} => {}", tf.getPath(), tailFile.getPath());
             tailFiles.remove(tf.getInode());
             tf = tailFile;
-            logger.info("rolling file : {} => {}", tf.getPath(), tailFile.getPath());
           } else {
             logger.info(" Other files use the same inode : clear tailFile {}", tf.getPath());
             tailFiles.remove(tf.getInode());

@@ -311,8 +311,9 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
     while (it.hasNext()) {
       TailFile tf = it.next();
       if (!updatedInodes.contains(tf.getInode())) {
+        logger.info("clear tailfile : not exists inode {}, {}", tf.getInode(), tf.getPath());
         it.remove();
-        logger.info("clear tailfile : not exists {}", tf.getPath());
+        tf.close();
       }
     }
 

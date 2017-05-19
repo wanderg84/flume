@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -229,7 +230,8 @@ public class TaildirSource extends AbstractSource implements
           tailFileProcess(tf, true);
         }
       }
-      closeTailFiles();
+      closeIdleFiles();
+      cleanTailFiles();
       try {
         TimeUnit.MILLISECONDS.sleep(retryInterval);
       } catch (InterruptedException e) {
@@ -282,10 +284,25 @@ public class TaildirSource extends AbstractSource implements
     }
   }
 
-  private void closeTailFiles() throws IOException, InterruptedException {
+  private void cleanTailFiles() throws IOException, InterruptedException {
+    //remove deleted file info
+    Iterator<TailFile> it = reader.getTailFiles().values().iterator();
+    while (it.hasNext()) {
+      TailFile tf = it.next();
+      if (!existingInodes.contains(tf.getInode())) {
+        logger.info("remove tailfile : not exists inode {}, {}", tf.getInode(), tf.getPath());
+        it.remove();
+        if (tf.getRaf() != null) {
+          tf.close();
+        }
+      }
+    }
+  }
+
+  private void closeIdleFiles() throws IOException, InterruptedException {
     for (long inode : idleInodes) {
       TailFile tf = reader.getTailFiles().get(inode);
-      if (tf.getRaf() != null) { // when file has not closed yet
+      if (tf != null && tf.getRaf() != null) { // when file has not closed yet
         tailFileProcess(tf, false);
         tf.close();
         logger.info("Closed file: " + tf.getPath() + ", inode: " + inode + ", pos: " + tf.getPos());

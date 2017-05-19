@@ -41,7 +41,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -303,17 +302,6 @@ public class ReliableTaildirEventReader implements ReliableEventReader {
         }
         tailFiles.put(inode, tf);
         updatedInodes.add(inode);
-      }
-    }
-
-    //clear deleted file info
-    Iterator<TailFile> it = tailFiles.values().iterator();
-    while (it.hasNext()) {
-      TailFile tf = it.next();
-      if (!updatedInodes.contains(tf.getInode())) {
-        logger.info("clear tailfile : not exists inode {}, {}", tf.getInode(), tf.getPath());
-        it.remove();
-        tf.close();
       }
     }
 

@@ -293,6 +293,7 @@ public class TaildirSource extends AbstractSource implements
         logger.info("remove tailfile : not exists inode {}, {}", tf.getInode(), tf.getPath());
         it.remove();
         if (tf.getRaf() != null) {
+          tailFileProcess(tf, false);
           tf.close();
         }
       }
